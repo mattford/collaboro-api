@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+
 use App\Question;
 use App\User;
 
@@ -47,8 +49,7 @@ class QuestionsController extends Controller
     public function view($slug, Request $request)
     {
         $question = Question::where('slug', $slug)->first();
-        
-        
+
         return response()->json($question, 200);
     }
     
@@ -61,17 +62,23 @@ class QuestionsController extends Controller
      */
     public function create(Request $request)
     {
-        $validated = $this->validate($request, [
-            'title' => 'required|max:100',
-            'content' => 'required',
-            'tags' => 'array',
-            'tags.*' => 'exists:tags,slug'
-        ]);
+        try {
+            $this->validate($request, [
+                'title' => 'required|max:100',
+                'content' => 'required',
+                'tags' => 'array',
+                'tags.*' => 'exists:tags,slug'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to create question', 'errors' => $errors], 400);
+        }
         
         $loggedInUser = $request->user();
         
         if (!$loggedInUser->hasPrivilege('question:create')) {
-            return response()->json(['message' => 'You do not have permission to create a new question'], 400);
+            return response()->json(['message' => 'You do not have permission to create a new question'], 401);
         }
         
         $question = new Question([
@@ -98,12 +105,18 @@ class QuestionsController extends Controller
      */
     public function update(Request $request)
     {
-        $validated = $this->validate($request, [
-            'id' => 'required|exists:questions',
-            'title' => 'max:100',
-            'tags' => 'array',
-            'tags.*' => 'exists:tags'
-        ]);
+        try {
+            $this->validate($request, [
+                'id' => 'required|exists:questions',
+                'title' => 'max:100',
+                'tags' => 'array',
+                'tags.*' => 'exists:tags'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to update question', 'errors' => $errors], 400);
+        }
         
         $loggedInUser = $request->user();
         
@@ -124,7 +137,7 @@ class QuestionsController extends Controller
             return response()->json(['message' => 'Question updated.'], 200);
         }
         
-        return response()->json(['message' => 'You do not have permission to update this question.'], 400);
+        return response()->json(['message' => 'You do not have permission to update this question.'], 401);
     }
     
     /**
@@ -136,9 +149,15 @@ class QuestionsController extends Controller
      */
     public function remove(Request $request)
     {
-        $validated = $this->validate($request, [
-            'id' => 'required|exists:questions'
-        ]);
+        try {
+            $this->validate($request, [
+                'id' => 'required|exists:questions'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to delete question', 'errors' => $errors], 400);
+        }
         
         $loggedInUser = $request->user();
         
@@ -153,19 +172,25 @@ class QuestionsController extends Controller
             return response()->json(['message' => 'Question deleted.'], 200);
         }
         
-        return response()->json(['message' => 'You do not have permission to delete this question.'], 400);
+        return response()->json(['message' => 'You do not have permission to delete this question.'], 401);
     }
     
     public function addVote(Question $question, Request $request)
     {
-        $this->validate($request, [
-            'direction' => 'required|in:up,down'
-        ]);
+        try {
+            $this->validate($request, [
+                'direction' => 'required|in:up,down'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to vote on question', 'errors' => $errors], 400);
+        }
         
         $user = $request->user();
         
         if (!$user->hasPrivilege('question:vote')) {
-            return response()->json(['message' => 'You do not have permission to vote on questions'], 400);
+            return response()->json(['message' => 'You do not have permission to vote on questions'], 401);
         }
 
         $this->undoExistingVotes($question, $user);
@@ -189,7 +214,7 @@ class QuestionsController extends Controller
         $user = $request->user();
         
         if (!$user->hasPrivilege('question:vote')) {
-            return response()->json(['message' => 'You do not have permission to vote on questions'], 400);
+            return response()->json(['message' => 'You do not have permission to vote on questions'], 401);
         }
         
         $this->undoExistingVotes($question, $user);

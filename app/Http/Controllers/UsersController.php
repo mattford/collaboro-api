@@ -12,38 +12,52 @@ class UsersController extends Controller
 {
     public function update(Request $request)
     {
-        $validated = $this->validate($request, [
-            'username' => 'required|exists:users',
-            'password' => 'confirmed',
-            'email' => 'email|unique:users',
-            'name' => 'regex:/[a-zA-Z ]+/',
-        ]);
+        try {
+            $this->validate($request, [
+                'username' => 'required|exists:users',
+                'password' => 'confirmed',
+                'email' => 'email|unique:users',
+                'name' => 'regex:/[a-zA-Z ]+/',
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to update user', 'errors' => $errors], 400);
+        }
         
         $loggedInUser = $request->user();
         
         $user = User::where('username', $request->input('username'))->first();
         
-        if ($loggedInUser->id !== $user->id) {
-            // TODO, allow admin to edit other users
-            return response()->json('Cannot edit other user', 401);
+        if (
+            ($loggedInUser->id !== $user->id && !$user->hasPrivilege('user:update_self')) &&
+            !$loggedInUser->hasPrivilege('user:update_other')
+        ){
+            return response()->json(['message' => 'You do not have permission to update this user.'], 401);
         }
         
         $user->fill($request->all());
         
         $user->save();
         
-        return response()->json(['User updated'], 200);
+        return response()->json(['message' => 'User updated'], 200);
         
     }
     
     public function register(Request $request)
     {
-        $validated = $this->validate($request, [
-            'username' => 'required|alpha_num|min:8|unique:users',
-            'password' => 'required|confirmed',
-            'email' => 'required|email|unique:users',
-            'name' => 'required|regex:/[a-zA-Z ]+/',
-        ]);
+        try {
+            $this->validate($request, [
+                'username' => 'required|alpha_num|min:8|unique:users',
+                'password' => 'required|confirmed',
+                'email' => 'required|email|unique:users',
+                'name' => 'required|regex:/[a-zA-Z ]+/',
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to register user.', 'errors' => $errors], 400);
+        }
 
         $user = new User([
             'username' => $request->input('username'),
@@ -59,10 +73,16 @@ class UsersController extends Controller
     
     public function login(Request $request)
     {
-        $validated = $this->validate($request, [
-            'username' => 'required',
-            'password' => 'required',
-        ]);
+        try {
+            $this->validate($request, [
+                'username' => 'required',
+                'password' => 'required',
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to login.', 'errors' => $errors], 400);
+        }
         
         $user = User::where('username', $request->input('username'))->first();
         

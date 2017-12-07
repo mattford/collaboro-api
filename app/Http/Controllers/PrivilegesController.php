@@ -16,12 +16,18 @@ class PrivilegesController extends Controller
     
     public function addPrivilegeToUser(User $user, Request $request)
     {
-        $validated = $this->validate($request, [
-            'role_slug' => 'required|exists:privileges,slug'
-        ]);
+        try {
+            $this->validate($request, [
+                'role_slug' => 'required|exists:privileges,slug'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to add privilege', 'errors' => $errors], 400);
+        }
         
         if (!$request->user()->hasPrivilege('admin:manage_privs')) {
-            return response()->json(['message' => 'Cannot manage privs'], 401);
+            return response()->json(['message' => 'You do not have permission to manage privileges.'], 401);
         }
         
         if ($user->hasPrivilege($request->input('role_slug'))) {
@@ -37,12 +43,19 @@ class PrivilegesController extends Controller
     
     public function deletePrivilegeFromUser(User $user, Request $request)
     {
-        $validated = $this->validate($request, [
-            'role_slug' => 'required|exists:privileges,slug'
-        ]);
+        try {
+            $this->validate($request, [
+                'role_slug' => 'required|exists:privileges,slug'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to remove privilege', 'errors' => $errors], 400);
+        }
+        
         
         if (!$request->user()->hasPrivilege('admin:manage_privs')) {
-            return response()->json(['message' => 'Cannot manage privs'], 401);
+            return response()->json(['message' => 'You do not have permission to manage privileges.'], 401);
         }
         
         if (!$user->hasPrivilege($request->input('role_slug'))) {

@@ -21,14 +21,20 @@ class AnswerCommentsController extends Controller
     
     public function create(Question $question, Answer $answer, Request $request)
     {
-        $this->validate($request, [
-            'content' => 'required'
-        ]);
+        try {
+            $this->validate($request, [
+                'content' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to add comment', 'errors' => $errors], 400);
+        }
         
         $user = $request->user();
         
         if (!$user->hasPrivilege('answer_comment:add')) {
-            return response()->json(['message' => 'You do not have permission to comment on answers'], 400);
+            return response()->json(['message' => 'You do not have permission to comment on answers'], 401);
         }
         
         $answer->comments()->create([
@@ -42,20 +48,26 @@ class AnswerCommentsController extends Controller
     
     public function update(Question $question, Answer $answer, Request $request)
     {
-        $this->validate($request, [
-            'id' => 'required|exists:answer_comments',
-            'content' => 'required'
-        ]);
+        try {
+            $this->validate($request, [
+                'id' => 'required|exists:answer_comments',
+                'content' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to update comment', 'errors' => $errors], 400);
+        }
         
         $user = $request->user();
         
         $comment = $answer->comments()->find($request->input('id'));
         
         if (
-            ($comment->created_by === $user->id && !$user->hasPrivilege('answer_comment:update_self')) ||
-            ($comment->created_by !== $user->id && !$user->hasPrivilege('answer_comment:update_other'))
+            ($comment->created_by === $user->id && !$user->hasPrivilege('answer_comment:update_self')) &&
+            !$user->hasPrivilege('answer_comment:update_other')
         ) {
-            return response()->json(['message' => 'You do not have permission to update this comment.'], 400);
+            return response()->json(['message' => 'You do not have permission to update this comment.'], 401);
         }
         
         $comment->updated_by = $user->id;
@@ -68,18 +80,24 @@ class AnswerCommentsController extends Controller
     
     public function remove(Question $question, Answer $answer, Request $request)
     {
-        $this->validate($request, [
-            'id' => 'required|exists:answer_comments'
-        ]);
+        try {
+            $this->validate($request, [
+                'id' => 'required|exists:answer_comments'
+            ]);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors();
+            
+            return response()->json(['message' => 'Failed to delete comment', 'errors' => $errors], 400);
+        }
         
         $user = $request->user();
         $comment = $answer->comments()->find($request->input('id'));
         
         if (
-            ($comment->created_by === $user->id && !$user->hasPrivilege('answer_comment:delete_self')) ||
-            ($comment->created_by !== $user->id && !$user->hasPrivilege('answer_comment:delete_other'))
+            ($comment->created_by === $user->id && !$user->hasPrivilege('answer_comment:delete_self')) &&
+            !$user->hasPrivilege('answer_comment:delete_other')
         ) {
-            return response()->json(['message' => 'You do not have permission to delete this comment.'], 400);
+            return response()->json(['message' => 'You do not have permission to delete this comment.'], 401);
         }
         
         $comment->delete();
