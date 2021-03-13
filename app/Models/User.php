@@ -1,12 +1,14 @@
 <?php
 
-namespace App;
+namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
@@ -25,7 +27,7 @@ class User extends Authenticatable
      * @var array
      */
     protected $hidden = [
-        'id', 'password'
+        'id', 'password', 'remember_token'
     ];
     
     /**
@@ -33,7 +35,7 @@ class User extends Authenticatable
      *
      * @return string
      */
-    public function getRouteKeyName()
+    public function getRouteKeyName(): string
     {
         return 'username';
     }
@@ -41,9 +43,10 @@ class User extends Authenticatable
     /**
      * Hash password before storage
      *
-     * @param $value Password value
+     * @param $value - Unhashed password
+     * @return void
      */
-    public function setPasswordAttribute($value)
+    public function setPasswordAttribute(string $value): void
     {
         $this->attributes['password'] = Hash::make($value);
     }
@@ -52,15 +55,23 @@ class User extends Authenticatable
      * Relationship with Privileges
      *
      */
-    public function privileges()
+    public function privileges(): HasMany
     {
-        return $this->belongsToMany('App\Privilege');
+        return $this->hasMany('App\Models\Privilege');
     }
     
-    public function hasPrivilege($privilege)
+    public function hasPrivilege($privilege): bool
     {
-        $privs = $this->privileges()->where('slug', $privilege)->count();
-        
-        return ($privs > 0);
+        return $this->privileges()->where('slug', $privilege)->count() > 0;
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->id;
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
     }
 }

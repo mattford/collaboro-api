@@ -17,7 +17,7 @@ Route::post('/register', 'UsersController@register');
 
 Route::post('/login', 'UsersController@login');
 
-Route::middleware('jwt.auth')->group(function() {
+Route::middleware('auth:api')->group(function() {
     Route::patch('/user', 'UsersController@update');
 
     Route::get('/user/me', function (Request $request) {
@@ -34,32 +34,32 @@ Route::middleware('jwt.auth')->group(function() {
     
     Route::get('/questions', 'QuestionsController@search');
     Route::get('/questions/{slug}', 'QuestionsController@view');
-    Route::post('/questions', 'QuestionsController@create');
-    Route::patch('/questions', 'QuestionsController@update');
-    Route::delete('/questions', 'QuestionsController@remove');
-    Route::post('/questions/{question}/vote', 'QuestionsController@addVote');
-    Route::delete('/questions/{question}/vote', 'QuestionsController@clearVote');
+    Route::post('/questions', 'QuestionsController@create')->middleware('can:create,App\Models\Question');
+    Route::patch('/questions/{question}', 'QuestionsController@update')->middleware('can:edit,question');
+    Route::delete('/questions/{question}', 'QuestionsController@remove')->middleware('can:delete,question');
+    Route::post('/questions/{question}/vote', 'QuestionsController@addVote')->middleware('can:vote,App\Models\Question');
+    Route::delete('/questions/{question}/vote', 'QuestionsController@clearVote')->middleware('can:vote,App\Models\Question');;
     
     Route::get('/questions/{question}/answers', 'AnswersController@listAll');
     Route::get('/questions/{question}/answers/{answer}', 'AnswersController@view');
-    Route::post('/questions/{question}/answers', 'AnswersController@create');
-    Route::patch('/questions/{question}/answers', 'AnswersController@update');
-    Route::delete('/questions/{question}/answers', 'AnswersController@remove');
-    Route::patch('/questions/{question}/answers/{answer}/solved', 'AnswersController@solved');
-    Route::post('/questions/{question}/answers/{answer}/vote', 'AnswersController@addVote');
-    Route::delete('/questions/{question}/answers/{answer}/vote', 'AnswersController@clearVote');
+    Route::post('/questions/{question}/answers', 'AnswersController@create')->middleware('can:create,App\Models\Answer');
+    Route::patch('/questions/{question}/answers/{answer}', 'AnswersController@update')->middleware('can:edit,answer');
+    Route::delete('/questions/{question}/answers/{answer}', 'AnswersController@remove')->middleware('can:delete,answer');
+    Route::patch('/questions/{question}/answers/{answer}/solved', 'AnswersController@solved')->middleware('can:accept-answer,question');
+    Route::post('/questions/{question}/answers/{answer}/vote', 'AnswersController@addVote')->middleware('can:vote,answer');
+    Route::delete('/questions/{question}/answers/{answer}/vote', 'AnswersController@clearVote')->middleware('can:vote,answer');
     
     // Question comments
     Route::get('/questions/{question}/comments', 'QuestionCommentsController@listAll');
-    Route::get('/questions/{question}/comments/{question_comment}', 'QuestionCommentsController@view');
-    Route::post('/questions/{question}/comments', 'QuestionCommentsController@create');
-    Route::patch('/questions/{question}/comments', 'QuestionCommentsController@update');
-    Route::delete('/questions/{question}/comments', 'QuestionCommentsController@remove');
+    Route::get('/questions/{question}/comments/{comment}', 'QuestionCommentsController@view');
+    Route::post('/questions/{question}/comments', 'QuestionCommentsController@create')->middleware('can:add-comment,App\Models\Question');
+    Route::patch('/questions/{question}/comments/{comment}', 'QuestionCommentsController@update')->middleware('can:edit-comment,question,comment');
+    Route::delete('/questions/{question}/comments/{comment}', 'QuestionCommentsController@remove')->middleware('can:delete-comment,question,comment');
     
     // Answer comments
     Route::get('/questions/{question}/answers/{answer}/comments', 'AnswerCommentsController@listAll');
-    Route::get('/questions/{question}/answers/{answer}/comments/{answer_comment}', 'AnswerCommentsController@view');
-    Route::post('/questions/{question}/answers/{answer}/comments', 'AnswerCommentsController@create');
-    Route::patch('/questions/{question}/answers/{answer}/comments', 'AnswerCommentsController@update');
-    Route::delete('/questions/{question}/answers/{answer}/comments', 'AnswerCommentsController@remove');
+    Route::get('/questions/{question}/answers/{answer}/comments/{comment}', 'AnswerCommentsController@view');
+    Route::post('/questions/{question}/answers/{answer}/comments', 'AnswerCommentsController@create')->middleware('can:add-comment,App\Models\Answer');
+    Route::patch('/questions/{question}/answers/{answer}/comments/{comment}', 'AnswerCommentsController@update')->middleware('can:edit-comment,answer,comment');
+    Route::delete('/questions/{question}/answers/{answer}/comments/{comment}', 'AnswerCommentsController@remove')->middleware('can:delete-comment,answer,comment');
 });

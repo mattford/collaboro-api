@@ -1,107 +1,57 @@
 <?php
-
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Question;
-use App\QuestionComment;
+use App\Models\Question;
+use App\Models\Comment;
 
 class QuestionCommentsController extends Controller
 {
-    public function listAll(Question $question, Request $request)
+    public function listAll(Question $question): JsonResponse
     {
-        return response()->json($question->comments()->all(), 200);
+        return response()->json($question->comments);
     }
     
-    public function view(Question $question, QuestionComment $questionComment, Request $request)
+    public function view(Comment $questionComment): JsonResponse
     {
-        return response()->json($questionComment, 200);
+        return response()->json($questionComment);
     }
     
     public function create(Question $question, Request $request)
     {
-        try {
-            $this->validate($request, [
-                'content' => 'required'
-            ]);
-        } catch (ValidationException $e) {
-            $errors = $e->validator->errors();
-            
-            return response()->json(['message' => 'Failed to add comment', 'errors' => $errors], 400);
-        }
+        $this->validate($request, [
+            'content' => 'required'
+        ]);
         
         $user = $request->user();
-        
-        if (!$user->hasPrivilege('question_comment:add')) {
-            return response()->json(['message' => 'You do not have permission to comment on questions'], 401);
-        }
-        
         $question->comments()->create([
             'content' => $request->input('content'),
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
         
-        return response()->json(['message' => 'Comment created'], 200);
+        return response()->json(['message' => 'Comment created']);
     }
     
-    public function update(Question $question, Request $request)
+    public function update(Question $question, Comment $comment, Request $request): JsonResponse
     {
-        try {
-            $this->validate($request, [
-                'id' => 'required|exists:question_comments',
-                'content' => 'required'
-            ]);
-        } catch (ValidationException $e) {
-            $errors = $e->validator->errors();
-            
-            return response()->json(['message' => 'Failed to update comment', 'errors' => $errors], 400);
-        }
+        $this->validate($request, [
+            'content' => 'required'
+        ]);
         
         $user = $request->user();
-        $comment = $question->comments()->find($request->input('id'));
-        
-        if (
-            ($comment->created_by === $user->id && !$user->hasPrivilege('question_comment:update_self')) &&
-            !$user->hasPrivilege('question_comment:update_other')
-        ) {
-            return response()->json(['message' => 'You do not have permission to update this comment.'], 401);
-        }
-        
-        $comment = $question->comments()->find($request->input('id'));
-        
         $comment->updated_by = $user->id;
         $comment->content = $request->input('content');
         
         $comment->save();
         
-        return response()->json(['message' => 'Comment updated'], 200);
+        return response()->json(['message' => 'Comment updated']);
     }
     
-    public function remove(Question $question, Request $request)
+    public function remove(Question $question, Comment $comment): JsonResponse
     {
-        try {
-            $this->validate($request, [
-                'id' => 'required|exists:question_comments'
-            ]);
-        } catch (ValidationException $e) {
-            $errors = $e->validator->errors();
-            
-            return response()->json(['message' => 'Failed to delete comment', 'errors' => $errors], 400);
-        }
-        
-        $user = $request->user();
-        $comment = $question->comments()->find($request->input('id'));
-        
-        if (
-            ($comment->created_by === $user->id && !$user->hasPrivilege('question_comment:delete_self')) &&
-            !$user->hasPrivilege('question_comment:delete_other')
-        ) {
-            return response()->json(['message' => 'You do not have permission to delete this comment.'], 401);
-        }
-        
         $comment->delete();
-        
-        return response()->json(['message' => 'Comment deleted'], 200);
+        return response()->json(['message' => 'Comment deleted']);
     }
 }

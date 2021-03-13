@@ -1,16 +1,15 @@
 <?php
-
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use JWTAuth;
-
-use App\User;
+use Illuminate\Validation\ValidationException;
+use App\Models\User;
 
 class UsersController extends Controller
 {
-    public function update(Request $request)
+    public function update(Request $request): JsonResponse
     {
         try {
             $this->validate($request, [
@@ -40,11 +39,11 @@ class UsersController extends Controller
         
         $user->save();
         
-        return response()->json(['message' => 'User updated'], 200);
+        return response()->json(['message' => 'User updated']);
         
     }
     
-    public function register(Request $request)
+    public function register(Request $request): JsonResponse
     {
         try {
             $this->validate($request, [
@@ -68,10 +67,10 @@ class UsersController extends Controller
         
         $user->save();
         
-        return response()->json(['message' => 'User created'], 200);
+        return response()->json(['message' => 'User created']);
     }
     
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
         try {
             $this->validate($request, [
@@ -83,18 +82,15 @@ class UsersController extends Controller
             
             return response()->json(['message' => 'Failed to login.', 'errors' => $errors], 400);
         }
-        
-        $user = User::where('username', $request->input('username'))->first();
-        
-        if (Hash::check($request->input('password'), $user->password)) {
+
+        $token = auth()->attempt(['username' => $request->input('username'), 'password' => $request->input('password')]);
+        if ($token) {
+            $user = User::where('username', $request->input('username'))->first();
             if (Hash::needsRehash($user->password)) {
                 $user->password = Hash::make($request->input('password'));
                 $user->save();
             }
-            
-            $token = JWTAuth::fromUser($user);
-            
-            return response()->json(['token' => $token], 200);
+            return response()->json(['token' => $token]);
         }
         
         return response()->json(['message' => 'Authentication failed'], 401);

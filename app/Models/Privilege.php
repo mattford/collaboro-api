@@ -1,8 +1,9 @@
 <?php
 
-namespace App;
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Privilege extends Model
 {
@@ -15,8 +16,8 @@ class Privilege extends Model
      * Relationship with User
      *
      */
-    public function users()
+    public function users(): BelongsToMany
     {
-        return $this->belongsToMany('App\User');
+        return $this->belongsToMany('App\Models\User');
     }
 }
