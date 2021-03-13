@@ -36,7 +36,6 @@ class UsersController extends Controller
         }
         
         $user->fill($request->all());
-        
         $user->save();
         
         return response()->json(['message' => 'User updated']);
@@ -90,9 +89,16 @@ class UsersController extends Controller
                 $user->password = Hash::make($request->input('password'));
                 $user->save();
             }
-            return response()->json(['token' => $token]);
+            return response()->json(['token' => $token, 'user' => $user->toArray()]);
         }
         
         return response()->json(['message' => 'Authentication failed'], 401);
+    }
+
+    public function logout(Request $request): JsonResponse {
+        if ($request->user()) {
+            auth()->logout();
+        }
+        return response()->json(['message' => 'Logged out']);
     }
 }

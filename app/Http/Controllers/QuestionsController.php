@@ -42,12 +42,12 @@ class QuestionsController extends Controller
     /**
      * Create a new question
      *
-     * @param $slug
+     * @param Question $question
      * @return JsonResponse
      */
-    public function view($slug): JsonResponse
+    public function view(Question $question): JsonResponse
     {
-        $question = Question::where('slug', $slug)->first();
+        $question->load(['creator', 'updator', 'tags']);
         return response()->json($question);
     }
 
